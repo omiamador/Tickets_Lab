@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HUF MX - Ticket Master System v2.9 Pro</title>
+    
+    <script src="config.js"></script>
+    <script src="user.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    
+    <!-- Firebase Integration - Versión Compatible -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #ced4da; 
+            --primary: #aa1c25; 
+            --ok: #34a853; 
+            --warn: #ff8c00; 
+            --error: #1a1a1a; 
+            --dark: #202124;
+            --huf-red: #aa1c25; 
+            --huf-dark: #555; 
+            --error-red: #ff4d4d;
+            --btn-hover: #b3050f;
+            --btn-bg: rgba(165, 23, 13, 0.68);
+            --blue-reopen: #0d47a1;
+            --info-blue: #17a2b8;
+            --purple-comment: #6f42c1;
+            
+            /* Prioridades */
+            --prio-alta: #d93025;
+            --prio-media: #f9ab00;
+            --prio-baja: #1a73e8;
+        }
+
+        * { box-sizing: border-box; }
+        body, html { height: 100%; margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; background-color: var(--bg-color); }
+        
+        /* Sistema de Login */
+        #loginOverlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: #f0f2f5; z-index: 9999; display: flex; 
+            justify-content: center; align-items: center; 
+        }
+        .card-login { 
+            width: 100%; max-width: 400px; background: #ffffff; 
+            padding: 25px; border-radius: 12px; border-top: 8px solid var(--huf-red); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative;
+        }
+        .logo-container { text-align: left; margin-bottom: 20px; }
+        .logo-subtitle { 
+            margin: 0; font-size: 0.65rem; font-weight: bold; color: #555; 
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .card-login h2 { 
+            color: var(--huf-red); text-align: left; text-transform: uppercase; 
+            margin: 5px 0 35px 0; font-size: 2.2rem; font-weight: 700; letter-spacing: -1px;
+        }
+        .input-login {
+            width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #777; 
+            border-radius: 8px; font-size: 1rem; box-sizing: border-box; outline: none; transition: border-color 0.2s;
+        }
+        .input-login:focus { border-color: var(--huf-red); }
+        .btn-send {
+            width: 100%; padding: 14px; background-color: var(--btn-bg); color: white; 
+            border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; 
+            cursor: pointer; text-transform: uppercase; transition: background-color 0.2s; margin-top: 5px;
+        }
+        .btn-send:hover { background-color: var(--huf-red); }
+        #loginError {
+            display: none; color: var(--error-red); font-size: 0.85rem; 
+            margin-bottom: 15px; text-align: center; font-weight: bold;
+        }
+        .btn-send1 {
+            width: 125px; padding: 14px; background-color: var(--btn-bg); color: white; 
+            border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; 
+            cursor: pointer; text-transform: uppercase; transition: background-color 0.2s; margin-top: 5px;
+        }
+        .btn-send1:hover { background-color: var(--huf-red); }
+        /* Contenedor Principal de la App */
+        .app-container { display: none; flex-direction: column; height: 100vh; }
+        header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #ffffff; padding: 10px 25px; 
+            border-bottom: 4px solid var(--huf-red); flex-shrink: 0; z-index: 100; color: var(--dark); 
+        }
+        .header-title-group h1 { margin: 0; font-size: 1.4rem; text-transform: uppercase; letter-spacing: -0.5px; }
+        .user-badge-header { background: #e9ecef; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: var(--huf-dark); margin-right: 15px; text-transform: uppercase; border: 1px solid #ddd; }
+        
+        .main-tabs { background: #222; display: flex; padding: 0 25px; flex-shrink: 0; justify-content: space-between; align-items: center;}
+        .tab-links-group { display: flex; }
+        .main-link { padding: 12px 25px; cursor: pointer; font-weight: bold; color: #aaa; text-transform: uppercase; font-size: 0.85rem; transition: 0.3s; }
+        .main-link.active { color: #fff; background: var(--huf-red); }
+
+        .tab-content { width: 100%; display: none; overflow: hidden; padding: 20px; background: #f1f3f4; }
+        .tab-content.active { display: block; overflow-y: auto; }
+
+        /* Panel de Control Estilo KPIs Principal */
+        .kpi-matrix {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            justify-content: flex-start;
+            align-items: stretch;
+            gap: 15px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 18px 14px 10px;
+            width: 100%;
+            min-width: 0;
+            background: rgba(146, 24, 24, 0.95);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 25px;
+            box-shadow: 0 14px 30px rgba(0,0,0,0.06);
+            position: relative;
+        }
+        .kpi-matrix::-webkit-scrollbar { height: 10px; }
+        .kpi-matrix::-webkit-scrollbar-thumb { background: rgb(145, 145, 145); border-radius: 999px; }
+        .kpi-card { background: white; padding: 18px 18px 20px; border-radius: 16px; border-left: 8px solid var(--huf-red); box-shadow: 0 16px 35px rgba(0,0,0,0.06); display: flex !important; flex-direction: column; justify-content: space-between; min-height: 100px; flex: 0 0 auto; min-width: 215px; }
+        .kpi-card.ok { border-left-color: var(--ok); }
+        .kpi-card.warn { border-left-color: var(--warn); }
+        .kpi-card.danger { border-left-color: var(--error-red); }
+        .kpi-card.info { border-left-color: var(--baja); }
+        .kpi-card.paused { border-left-color: #6c757d; }
+        .kpi-card.canceled { border-left-color: #6f42c1; }
+        .kpi-title { font-weight: 800; font-size: 0.82rem; margin-bottom: 12px; text-transform: uppercase; color: #444; letter-spacing: 0.6px; }
+        .kpi-num { font-size: 2rem; font-weight: 800; font-family: 'Courier New', monospace; color: var(--dark); }
+        .kpi-card span { opacity: 0.85; }
+
+        /* Contenedor de Formulario y Listado */
+     
+        .workspace-layout.full-width { grid-template-columns: 1fr; }
+        /* Contenedor principal del formulario: Ajustado a horizontal */
+
+
+.form-panel { 
+    background: white; 
+    padding: 30px 15px;
+    border-radius: 12px; 
+    border: 3px solid #020202; 
+    display: grid; 
+    /* Cambiamos px por una mezcla de tamaños fijos para selectores y flexible para texto */
+    grid-template-columns: repeat(5, 1fr) 2fr 1fr; /* 5 campos iguales, falla más grande, botón final */
+    gap: 15px; 
+    align-items: start; 
+    width: 100%;
+}
+#ticketFalla {
+    height: 140px;      /* Define la altura fija que desees */
+    min-height: 140px;  /* Asegura que no se reduzca */
+    max-height: 140px;  /* Asegura que no crezca */
+    resize: none;      /* ¡ESTO QUITA LA OPCIÓN DE CAMBIAR EL ALTO! */
+    overflow-y: auto;  /* Si el texto es largo, permitirá scroll interno */
+}
+/* El título debe abarcar todo para no quedar descentrado */
+.form-panel h3 { 
+    grid-column: 1 / -1; 
+    text-align: center; 
+    margin-bottom: 20px;
+}
+.form-panel .form-group { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+    
+    /* Configuración de la caja blanca con borde de 6px */
+    background-color: #ffffff; 
+    border: 0px solid #020202; /* Cambia este color (aquí puse rojo) por el que desees */
+    border-radius: 4px;       /* Bordes redondeados para un toque moderno */
+    padding: 10px;             /* Espacio interno para que no pegue al borde */
+    box-sizing: border-box;    /* Asegura que el padding no desborde el ancho */
+}
+
+.form-panel .form-group label { 
+    margin: 0; 
+    padding: 0;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: BLACK;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+        .form-control { text-align: center;width: 100%; padding: 12px; border: 2px solid #000000; border-radius: 10px; font-size: 0.95rem; background: #f8fafcbe; transition: all 0.3s ease; }
+        .form-control:focus { border-color: var(--huf-red); background: #fff; box-shadow: 0 0 0 4px rgba(170, 28, 37, 0.1); outline: none; }
+
+        
+        /* Select Múltiple Optimizado */
+        .form-control-multiple { height: 140px; padding: 5px; overflow-y: auto; }
+
+        .table-panel { margin-top: 10px; background: rgba(255,255,255,0.96); padding: 24px; border-radius: 18px; box-shadow: 0 20px 40px rgba(0,0,0,0.07); display: flex; flex-direction: column; gap: 18px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.08); }
+        
+        .search-bar-container { display: flex; gap: 12px; align-items: center; width: 100%; padding-bottom: 12px; border-bottom: 1px solid #e9ecef; margin-bottom: 10px; }
+        .search-input { flex: 1; padding: 12px 16px; border-radius: 14px; border: 1px solid #d1d5db; outline: none; font-size: 0.95rem; background: #f8fafc; transition: border-color 0.2s, box-shadow 0.2s; }
+        .search-input:focus { border-color: var(--huf-red); box-shadow: 0 0 0 5px rgba(170, 28, 37, 0.08); }
+
+        .table-filters { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; margin-top: 12px; padding: 18px 0 0 0; }
+        .table-filters div { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+        .select-filter { padding: 10px 14px; border-radius: 14px; border: 1px solid #d1d5db; font-size: 0.9rem; font-weight: 600; min-width: 160px; background: #fff; }
+        .select-filter:focus { border-color: var(--huf-red); box-shadow: 0 0 0 5px rgba(170, 28, 37, 0.08); }
+        .btn-filter { padding: 12px 22px; border: none; border-radius: 14px; background-color: var(--huf-red); color: white; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: transform 0.2s, background-color 0.2s; }
+        .btn-filter:hover { background-color: var(--btn-hover); transform: translateY(-1px); }
+        .filter-label { font-size: 0.7rem; text-transform: uppercase; color: #444; font-weight: bold; }
+
+        /* Tablas */
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+        th { background: var(--dark); color: white; padding: 12px; text-transform: uppercase; font-size: 0.8rem; position: sticky; top: 0; z-index: 10; }
+        td { padding: 12px; border-bottom: 1px solid #ddd; vertical-align: middle; }
+        tr:hover { background-color: #f8f9fa; }
+
+        /* Input de cambio rápido de fecha (Admin) */
+        .inline-date-edit { border: 1px dashed var(--primary); padding: 4px 6px; border-radius: 4px; font-family: inherit; font-size: 0.85rem; outline: none; color: var(--dark); background: transparent; font-weight: 600; cursor: pointer; }
+        .inline-date-edit:focus { border-style: solid; background: #fff; }
+        .inline-date-edit.saved-date { border-color: #28a745 !important; box-shadow: 0 0 0 5px rgba(40,167,69,0.18); }
+
+        /* Estados y Prioridades de Ticket */
+        .badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; color: white; text-transform: uppercase; display: inline-block; }
+        .bg-open { background-color: var(--warn); }
+        .bg-closed { background-color: var(--ok); }
+        .bg-paused { background-color: #6c757d; }
+        .bg-canceled { background-color: #6f42c1; }
+        
+        .prio-badge { padding: 3px 7px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; color: white; text-transform: uppercase; display: inline-block; }
+        .p-high { background-color: var(--prio-alta); }
+        .p-medium { background-color: var(--prio-media); color: var(--dark); }
+        .p-low { background-color: var(--prio-baja); }
+
+        /* Alertas de Vencimiento */
+        .status-warn { animation: blink-warn 2s infinite; background-color: #ffffcc !important; }
+        .status-crit { animation: blink-crit 1.2s infinite; background-color: #ffcccc !important; font-weight: bold; }
+        @keyframes blink-warn { 0%, 100% { background-color: white; } 50% { background-color: #fff3cd; } }
+        @keyframes blink-crit { 0%, 100% { background-color: white; } 50% { background-color: #f8d7da; } }
+
+        /* Estilos de Botones de Acción */
+        .action-icon-btn { 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            width: 32px; 
+            height: 32px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 1.05rem; 
+            color: white; 
+            transition: all 0.2s ease; 
+            margin-right: 4px; 
+            margin-top: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .action-icon-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15); filter: brightness(1.1); }
+        .action-icon-btn:disabled { background-color: #ccc !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        
+        .btn-ico-close { background-color: var(--ok); }
+        .btn-ico-reopen { background-color: var(--blue-reopen); }
+        .btn-ico-pause { background-color: #f9ab00; }
+        .btn-ico-cancel { background-color: var(--error-red); }
+        .btn-ico-resume { background-color: #0d47a1; }
+        .btn-ico-note { background-color: var(--purple-comment); }
+        .btn-ico-view { background-color: var(--info-blue); }
+
+        .btn-header-action { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; transition: 0.2s; }
+        .btn-exit { background: #555; color: white; }
+        .btn-exit:hover { background: #333; }
+        .btn-csv { background-color: #157347; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .btn-csv:hover { background-color: #115c39; }
+        .btn-csv:disabled { background-color: #6c757d !important; cursor: not-allowed; opacity: 0.6; }
+
+        /* Submenú Flotante Click Derecho */
+        #customContextMenu {
+            display: none;
+            position: absolute;
+            background: #ffffff;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border-radius: 6px;
+            z-index: 10000;
+            width: 150px;
+            overflow: hidden;
+        }
+        .context-item {
+            padding: 10px 15px;
+            font-size: 0.85rem;
+            color: var(--dark);
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .context-item:hover { background: var(--primary); color: white; }
+
+        /* Estructura del Módulo de Estadísticas y Reportes */
+        .stats-layout { display: grid; grid-template-columns: 1fr; gap: 22px; max-width: 1360px; margin: 0 auto; width: 100%; padding-bottom: 40px; }
+        .stats-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+        .stats-header h2 { margin: 0; font-size: 1.5rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dark); }
+        .filter-panel-row { background: white; padding: 18px 22px; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: flex-start; gap: 16px; flex-wrap: wrap; }
+        .chart-main-container { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); width: 100%; }
+        .stats-top-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .kpi-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 18px; width: 100%; }
+        .kpi-summary-card { background: #fff; border-radius: 14px; box-shadow: 0 5px 18px rgba(0,0,0,0.05); padding: 18px 18px 16px; display: flex; flex-direction: column; justify-content: space-between; min-height: 108px; }
+        .kpi-summary-card strong { font-size: 0.76rem; color: #5d5d5d; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+        .kpi-summary-card span { font-size: 1.7rem; font-weight: 800; color: var(--dark); }
+        .stats-pie-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 20px; width: 100%; }
+        .stats-table-grid { display: grid; grid-template-columns: repeat(2, minmax(320px, 1fr)); gap: 20px; width: 100%; }
+        .pie-chart-card { background: white; padding: 24px 22px; border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; }
+        .pie-wrapper { width: 100%; max-width: 320px; margin: 0 auto; position: relative; }
+        .drilldown-panel { background: white; padding: 24px 24px 22px; border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); width: 100%; }
+        .drilldown-panel table { width: 100%; border-collapse: collapse; }
+        .drilldown-panel th, .drilldown-panel td { padding: 12px 10px; border-bottom: 1px solid #e6e9ed; text-align: left; font-size: 0.9rem; }
+        .drilldown-panel th { color: var(--dark); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .stats-table-grid .drilldown-panel { min-height: 360px; }
+        .stats-info-block { display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+        .stats-info-card { flex: 1; min-width: 120px; background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 5px 16px rgba(0,0,0,0.05); border-left: 4px solid var(--huf-red); }
+        .stats-info-card strong { display: block; font-size: 0.72rem; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+        .stats-info-card span { font-size: 1.5rem; font-weight: 800; color: var(--dark); }
+        .stats-table-grid table { width: 100%; }
+        .stats-table-grid th, .stats-table-grid td { padding: 12px 10px; border-bottom: 1px solid #e8ecf1; }
+        .stats-table-grid thead th { background: #fafbfc; }
+        .stats-table-grid tbody tr:hover { background: #f9fbff; }
+        .dashboard-note { background: rgba(255, 224, 224, 0.9); border-left: 4px solid #c92a2a; color: #5f2121; padding: 14px 18px; border-radius: 12px; font-size: 0.92rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
+        .dashboard-note strong { color: #b02a37; }
+        
+        @media (max-width: 980px) {
+            .stats-pie-grid, .stats-table-grid { grid-template-columns: 1fr; }
+            .stats-header { flex-direction: column; align-items: stretch; }
+        }
+        @media (max-width: 640px) {
+            .filter-panel-row { justify-content: stretch; }
+            .filter-panel-row label, .filter-panel-row select, .filter-panel-row button { width: 100%; }
+        }
+        
+        /* Etiquetas de Responsables */
+        .responsible-tag { background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: inline-block; margin-right: 4px; margin-top: 2px; border: 1px solid #ced4da; }
+        .type-tag { display: inline-flex; align-items: center; justify-content: center; background: rgba(170,28,37,0.08); color: var(--huf-red); padding: 3px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+        .him-badge { background: #202124; color: #fff; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; font-family: monospace; }
+
+        .select-filter { padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; font-size: 0.9rem; font-weight: bold; min-width: 180px; outline: none; }
+        .select-filter:focus { border-color: var(--huf-red); }
+        .btn-filter { padding: 10px 20px; border: none; border-radius: 6px; background-color: var(--huf-red); color: white; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+        .btn-filter:hover { background-color: var(--btn-hover); }
+
+
+        /* Asegura que el input con Flatpickr mantenga la consistencia */
+.date-picker {
+    background: #fff !important;
+    cursor: pointer;
+}
+
+/* Si necesitas que el calendario se vea integrado en el diseño limpio */
+.flatpickr-calendar {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15) !important;
+    border-radius: 10px !important;
+}
+
+.header-title-group {
+            display: flex;
+            align-items: center; /* Alinea verticalmente el logo y el texto */
+            gap: 15px;           /* Espacio entre el logo y el texto */
+        }
+
+        .header-title-group img {
+            height: 40px;        /* Ajusta este valor al tamaño que prefieras */
+            width: auto;         /* Mantiene la proporción del logo */
+        }
+
+        .header-title-group h1 {
+            margin: 0;           /* Elimina márgenes por defecto para mejor alineación */
+            font-size: 24px;     /* Ajusta el tamaño de fuente a tu gusto */
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="customContextMenu">
+    <div class="context-item" id="contextDeleteBtn">🗑️ Eliminar</div>
+</div>
+
+<div id="loginOverlay">
+    <div class="card-login">
+        <div class="logo-container">
+            <img src="logo.png" alt="HUF Logo" onerror="this.style.display='none';">
+            <p class="logo-subtitle">Developed By Omar Amador 1.0</p>
+        </div>
+        <div class="login-box">
+            <h2>Ticket System</h2>
+            <div id="loginError">⚠️ Usuario o Contraseña Inválidos</div>
+            <input type="text" id="userInput" class="input-login" placeholder="Usuario">
+            <input type="password" id="passInput" class="input-login" placeholder="Contraseña">
+            <button class="btn-send" onclick="handleLogin()">INGRESAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="app-container" id="appContainer">
+    <header>
+        <div class="header-title-group">
+            <img src="logo.png" alt="HUF Logo" onerror="this.style.display='none';">
+            <h1>HUF MX - Lab Ticket Control</h1>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <span class="user-badge-header" id="userDisplayBadge">User: Admin</span>
+            <button class="btn-header-action btn-exit" onclick="handleLogout()">Salir</button>
+        </div>
+    </header>
+
+    <div class="main-tabs">
+        <div class="tab-links-group">
+            <div class="main-link active" id="tab-tickets-lnk" onclick="switchTab('tickets')">TICKETS</div>
+            <div class="main-link" id="tab-stats-lnk" onclick="switchTab('stats')">DASHBOARD</div>
+        </div>
+        <div style="padding-right: 25px;">
+            <button class="btn-csv" id="btnExportarBaseCSV" onclick="exportarCSV()">📊 EXPORT TO CSV</button>
+        </div>
+    </div>
+
+    <div id="tab-tickets" class="tab-content active">
+        <div class="kpi-matrix">
+            <div class="kpi-card warn">
+                <div class="kpi-title">IN PROGRESS</div>
+                <div class="kpi-num" id="kpi-abiertos">0</div>
+            </div>
+            <div class="kpi-card ok">
+                <div class="kpi-title">RESOLVED</div>
+                <div class="kpi-num" id="kpi-cerrados">0</div>
+            </div>
+            <div class="kpi-card danger">
+                <div class="kpi-title">EXPIRED</div>
+                <div class="kpi-num" id="kpi-vencidos">0</div>
+            </div>
+            <div class="kpi-card paused">
+                <div class="kpi-title">PAUSED</div>
+                <div class="kpi-num" id="kpi-pausados">0</div>
+            </div>
+            <div class="kpi-card canceled">
+                <div class="kpi-title">CANCELED</div>
+                <div class="kpi-num" id="kpi-cancelados">0</div>
+            </div>
+            <div class="kpi-card info">
+                <div class="kpi-title">NEXT DUE</div>
+                <div class="kpi-num" id="kpi-proximos">0</div>
+            </div>
+            <div class="kpi-card warn">
+                <div class="kpi-title">REOPENED</div>
+                <div class="kpi-num" id="kpi-reabiertos">0</div>
+            </div>
+
+
+            <div class="kpi-card info">
+                <div class="kpi-title">LAB EFFICIENCY</div>
+                <div class="kpi-num" id="kpi-eficiencia">100%</div>
+            </div>
+            <div class="kpi-card danger">
+                <div class="kpi-title">AVG RESPONSE TIME</div>
+                <div class="kpi-num" id="kpi-promedio">0d</div>
+            </div>
+
+        </div>
+
+        <div class="workspace-layout" id="workspaceLayout">
+            <div class="form-panel" id="panelFormularioTicket">
+              
+                <div class="form-group">
+                    <label>DEVICE</label>
+                    <select id="ticketEquipo" class="form-control" onchange="actualizarDesplegableHIM()"></select>
+                </div>
+                <div class="form-group">
+                    <label>HIM</label>
+                    <select id="ticketHIM" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>REQUEST TYPE</label>
+                    <select id="ticketTipo" class="form-control">
+                        <option value="MAINTENANCE">MAINTENANCE</option>
+                        <option value="REPAIR">REPAIR</option>
+                        <option value="INSPECTION">INSPECTION</option>
+                        <option value="UPGRADE">UPGRADE</option>
+                        <option value="GENERAL">GENERAL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>PRIORITY</label>
+                    <select id="ticketPrioridad" class="form-control">
+                        <option value="low">LOW</option>
+                        <option value="medium">MEDIUM</option>
+                        <option value="high">HIGH</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>USER</label>
+                    <input type="text" id="ticketReporta" class="form-control" placeholder="Nombre del operador">
+                </div>
+                <div class="form-group" id="formGroupFechaApertura" style="display:none;">
+                    <label>CREATION DATE</label>
+                    <input type="text" id="ticketFechaApertura" class="form-control date-picker" placeholder="Seleccionar fecha...">
+                </div>
+                <div class="form-group">
+    <label>DEADLINE</label>
+    <input type="text" id="ticketFechaLimite" class="form-control date-picker" placeholder="Seleccionar fecha...">
+</div>
+
+                                <div class="form-group">
+                    <label>RESPONSABLE</label>
+                    <select id="ticketResponsables" class="form-control form-control-multiple" multiple></select>
+                  
+                </div>
+                <div class="form-group">
+                    <label>DESCRIPTION</label>
+                    <textarea id="ticketFalla" class="form-control" rows="2" placeholder="Comments..."></textarea>
+                </div>
+
+
+
+
+                <button class="btn-send1" style="margin-top:5px;" onclick="crearTicket()">UPLOAD TICKET</button>
+            </div>
+
+           
+                
+                <div class="table-filters">
+
+                    <div>
+                        <label class="filter-label">EQUIPMENT</label>
+                        <select id="filterEquipment" class="select-filter" onchange="actualizarPantalla()">
+                            <option value="ALL">ALL</option>
+                        </select>
+                    </div>
+
+                    
+
+                    <div>
+                        <label class="filter-label">PRIORITY</label>
+                        <select id="filterPriority" class="select-filter" onchange="actualizarPantalla()">
+                            <option value="ALL">ALL</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="LOW">LOW</option>
+                        </select>
+                    </div>
+
+
+                    <div>
+                        <label class="filter-label">TYPE</label>
+                        <select id="filterType" class="select-filter" onchange="actualizarPantalla()">
+                            <option value="ALL">ALL</option>
+                            <option value="MAINTENANCE">MAINTENANCE</option>
+                            <option value="REPAIR">REPAIR</option>
+                            <option value="INSPECTION">INSPECTION</option>
+                            <option value="UPGRADE">UPGRADE</option>
+                            <option value="GENERAL">GENERAL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">RESPONSIBLE</label>
+                        <select id="filterResponsible" class="select-filter" onchange="actualizarPantalla()">
+                            <option value="ALL">ALL</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label">DUE</label>
+                        <select id="filterDue" class="select-filter" onchange="actualizarPantalla()">
+                            <option value="ALL">ALL</option>
+                            <option value="OVERDUE">OVERDUE</option>
+                            <option value="NEXT_3">NEXT 3 DAYS</option>
+                            <option value="NEXT_7">NEXT 7 DAYS</option>
+                            <option value="NEXT_15">NEXT 15 DAYS</option>
+                        </select>
+                    </div>
+
+                                                            <div>
+                        <label class="filter-label">STATUS</label>
+                        <select id="filterStatus" class="select-filter" onchange="actualizarPantalla()">
+                            <option value="ALL">ALL</option>
+                            <option value="IN PROGRESS">IN PROGRESS</option>
+                            <option value="RESOLVED">RESOLVED</option>
+                            <option value="PAUSED">PAUSED</option>
+                            <option value="CANCELED">CANCELED</option>
+                        </select>
+                    </div>
+
+
+                    <div>
+                        <label class="filter-label">YEAR</label>
+                        <select id="filterYear" class="select-filter" onchange="actualizarPantalla()">
+                            <option value="ALL">ALL</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                            <option value="2027">2027</option>
+                            <option value="2028">2028</option>
+                            <option value="2029">2029</option>
+                            <option value="2030">2030</option>
+                        </select>
+                    </div>
+                    <button class="btn-filter" style="height:44px; align-self:flex-end;" onclick="resetTableFilters()">CLEAR</button>
+                    
+                    🔍 <input type="text" id="buscadorTickets" class="search-input" placeholder="SEARCH..." onkeyup="actualizarPantalla()">
+               
+                </div>
+                <small style="color: #666; font-style: italic; display: block;" id="tipClickDerechoEliminar"></small>
+                <div style="overflow-x: auto; flex: 1;">
+                    <table>
+                        <thead>
+                            <tr>
+<th>Ticket ID</th>
+                                <th>Equipment / Failure</th>
+                                <th>Priority</th>
+                                <th>Type</th>
+                                <th>Assigned To</th>
+                                <th>Opened</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Closed</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTicketsBody"></tbody>
+                    </table>
+                </div>
+            
+
+
+
+
+
+        </div>
+    </div>
+
+    <div id="tab-stats" class="tab-content">
+        <div class="stats-layout">
+            <div class="stats-header">
+                <h2>TICKETS DASHBOARD</h2>
+                <div class="filter-panel-row">
+                    <label>PERIOD</label>
+                    <select id="selectPeriodoFiltro" class="select-filter" onchange="actualizarFiltrosPeriodo()">
+                        <option value="ALL_PERIODS">ALL PERIODS (All Time)</option>
+                        <option value="YEAR">By Year</option>
+                        <option value="MONTH">By Month</option>
+                    </select>
+                </div>
+                <div class="filter-panel-row" id="yearFilterContainer" style="display:none;">
+                    <label>SELECT YEAR</label>
+                    <select id="selectAñoFiltro" class="select-filter" onchange="filtrarMesPorSelector()">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                    <button class="btn-filter" onclick="filtrarMesPorSelector()">LOAD</button>
+                </div>
+                <div class="filter-panel-row" id="monthFilterContainer" style="display:none;">
+                    <label>SELECT MONTH</label>
+                    <select id="selectMesFiltro" class="select-filter" onchange="filtrarMesPorSelector()">
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                    <button class="btn-filter" onclick="filtrarMesPorSelector()">LOAD</button>
+                </div>
+            </div>
+
+
+
+            <div class="kpi-summary-grid">
+                <div class="kpi-summary-card">
+                    <strong>In Progress</strong>
+                    <span id="kpiDash-abiertos">0</span>
+                </div>
+                <div class="kpi-summary-card">
+                    <strong>Resolved</strong>
+                    <span id="kpiDash-cerrados">0</span>
+                </div>
+                <div class="kpi-summary-card">
+                    <strong>Expired</strong>
+                    <span id="kpiDash-vencidos">0</span>
+                </div>
+                <div class="kpi-summary-card">
+                    <strong>Paused</strong>
+                    <span id="kpiDash-pausados">0</span>
+                </div>
+                <div class="kpi-summary-card">
+                    <strong>Next Due</strong>
+                    <span id="kpiDash-proximos">0</span>
+                </div>
+                <div class="kpi-summary-card">
+                    <strong>Avg Response</strong>
+                    <span id="kpiDash-promedio">0d</span>
+                </div>
+                <div class="kpi-summary-card">
+                    <strong>Reopened</strong>
+                    <span id="kpiDash-reabiertos">0</span>
+                </div>
+
+            </div>
+
+            <div class="stats-top-grid">
+                <div class="chart-main-container">
+                    <h3 style="margin-top:0; text-align:center; font-size:1rem; color:var(--dark); text-transform:uppercase;">Yearly Status Balance</h3>
+                    <canvas id="chartMensual" height="85"></canvas>
+                </div>
+            </div>
+
+            <div class="stats-pie-grid">
+                <div class="pie-chart-card">
+                    <h3 style="margin-top:0; margin-bottom:16px; font-size:0.95rem; text-transform:uppercase; color:var(--primary); text-align:center;">Monthly Status Breakdown</h3>
+                    <div class="pie-wrapper">
+                        <canvas id="chartPieEstatus"></canvas>
+                    </div>
+                </div>
+                <div class="pie-chart-card">
+                    <h3 style="margin-top:0; margin-bottom:16px; font-size:0.95rem; text-transform:uppercase; color:var(--primary); text-align:center;">Team Workload Distribution</h3>
+                    <div class="pie-wrapper">
+                        <canvas id="chartPieResponsables"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-table-grid">
+                <div class="drilldown-panel" id="drilldownPanel">
+                    <h3 id="drilldownTitle" style="margin-top:0; color:var(--primary); text-transform:uppercase; border-bottom:2px solid #ddd; padding-bottom:8px; font-size:1.05rem;">Monthly Tickets</h3>
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ticket ID</th>
+                                    <th>Equipment / Failure</th>
+                                    <th>Assigned To</th>
+                                    <th>Opened</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drilldownTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="drilldown-panel">
+                    <h3 style="margin-top:0; color:var(--dark); text-transform:uppercase; border-bottom:2px solid #ddd; padding-bottom:8px; font-size:1.05rem;">Users Workload</h3>
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Assigned To</th>
+                                    <th style="text-align:center;">All</th>
+                                    <th style="text-align:center;">In Progress</th>
+                                    <th style="text-align:center;">Resolved</th>
+                                    <th style="text-align:center;">Expired</th>
+                                    <th style="text-align:center; background-color: rgba(170, 28, 37, 0.08); color: var(--primary);" id="th-resp-mes">Month</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaResponsablesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    flatpickr("#ticketFechaLimite", {
+        locale: "es",
+        dateFormat: "d/m/Y",
+        defaultDate: "today" // Esto llena el campo automáticamente hoy
+    });
+    
+    // Habilitar Enter en el login
+    const userInput = document.getElementById('userInput');
+    const passInput = document.getElementById('passInput');
+    [userInput, passInput].forEach(input => {
+        if (input) {
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleLogin();
+                }
+            });
+        }
+    });
+
+    // Ahora sí, inicializa el resto de tu sistema
+    initSystem();
+});
+
+flatpickr(".date-picker", {
+    locale: "es",           // Español
+    dateFormat: "d/m/Y",    // Formato amigable
+    allowInput: true,       // Permite escribir la fecha manualmente
+    static: true            // Importante para que no se mueva el diseño
+});
+    // ==================== FIREBASE CONFIGURATION ====================
+    // Get these values from Firebase Console > Project Settings > Web App
+const firebaseConfig = {
+  apiKey: "AIzaSyDqIUka-OSMJzeDr4zSFpAbslEBUAkh99c",
+  authDomain: "ticketslab-839fb.firebaseapp.com",
+  databaseURL: "https://ticketslab-839fb-default-rtdb.firebaseio.com",
+  projectId: "ticketslab-839fb",
+  storageBucket: "ticketslab-839fb.firebasestorage.app",
+  messagingSenderId: "75978042688",
+  appId: "1:75978042688:web:d5fca3c546bfae804d1ea5"
+    };
+
+    let db = null;
+    let firebaseInitialized = false;
+
+    // Initialize Firebase
+    function initializeFirebase() {
+        // Esperar a que Firebase esté disponible
+        if (typeof firebase === 'undefined') {
+            console.warn('⚠️ Firebase aún no está cargado, reintentar en 500ms');
+            setTimeout(initializeFirebase, 500);
+            return;
+        }
+        
+        try {
+            // Verificar si ya se inicializó
+            if (firebase.apps.length === 0) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.database();
+            firebaseInitialized = true;
+            console.log('✅ Firebase Realtime Database initialized successfully');
+        } catch (error) {
+            console.warn('⚠️ Firebase initialization warning:', error.message);
+            firebaseInitialized = false;
+        }
+    }
+
+    // Guardar tickets en Firebase Realtime Database
+    async function guardarEnFirebase() {
+        if (!firebaseInitialized || !db) {
+            console.log('Firebase no disponible, guardando solo en localStorage');
+            return;
+        }
+
+        try {
+            for (const ticket of tickets) {
+                try {
+                    await db.ref('tickets/' + ticket.id).set(ticket);
+                } catch (error) {
+                    console.warn(`Error guardando ticket ${ticket.id}:`, error);
+                }
+            }
+            console.log('✅ Tickets guardados en Firebase Realtime Database');
+        } catch (error) {
+            console.error('Error al guardar en Firebase:', error);
+        }
+    }
+
+    // Cargar tickets desde Firebase Realtime Database
+    async function cargarDesdeFirebase() {
+        if (!firebaseInitialized || !db) {
+            console.log('Firebase no disponible, usando localStorage');
+            return false;
+        }
+
+        try {
+            const snapshot = await db.ref('tickets').once('value');
+            const ticketsFirebase = [];
+            snapshot.forEach(childSnapshot => {
+                const data = childSnapshot.val();
+                if (data && data.id) {
+                    ticketsFirebase.push(data);
+                }
+            });
+
+            if (ticketsFirebase.length > 0) {
+                tickets = ticketsFirebase.filter(tk => tk && tk.id);
+                localStorage.setItem('huf_tickets', JSON.stringify(tickets));
+                console.log(`✅ ${tickets.length} tickets cargados desde Firebase Realtime Database`);
+                return true;
+            }
+        } catch (error) {
+            console.warn('Error cargando desde Firebase:', error);
+        }
+        return false;
+    }
+
+    // ================================================================
+
+    const mesesNombres = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const añosDisponibles = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
+
+    let tickets = [];
+    let chartInstance = null;
+    let chartPieEstatusInstance = null;
+    let chartPieResponsablesInstance = null;
+    let selectedTicketIdForContext = null;
+    let periodoActual = "ALL_PERIODS"; // "ALL_PERIODS", "YEAR", "MONTH"
+    
+    let currentUser = { user: "", role: "reader", fullName: "" };
+    
+    function actualizarFiltrosPeriodo() {
+        periodoActual = document.getElementById('selectPeriodoFiltro').value || "ALL_PERIODS";
+        const yearContainer = document.getElementById('yearFilterContainer');
+        const monthContainer = document.getElementById('monthFilterContainer');
+        
+        if (periodoActual === "ALL_PERIODS") {
+            yearContainer.style.display = 'none';
+            monthContainer.style.display = 'none';
+            filtrarMesPorSelector();
+        } else if (periodoActual === "YEAR") {
+            yearContainer.style.display = 'block';
+            monthContainer.style.display = 'none';
+            document.getElementById('selectA\u00f1oFiltro').value = new Date().getFullYear();
+            filtrarMesPorSelector();
+        } else if (periodoActual === "MONTH") {
+            yearContainer.style.display = 'block';
+            monthContainer.style.display = 'block';
+            document.getElementById('selectA\u00f1oFiltro').value = new Date().getFullYear();
+            document.getElementById('selectMesFiltro').value = new Date().getMonth();
+            filtrarMesPorSelector();
+        }
+    }
+
+    function handleLogin() {
+        const u = document.getElementById('userInput').value.trim();
+        const p = document.getElementById('passInput').value;
+        
+        let validUserObj = null;
+        if(typeof USERS_DATABASE !== 'undefined') {
+            validUserObj = USERS_DATABASE.find(userItem => userItem.user === u && userItem.pass === p);
+        }
+
+        if(validUserObj) {
+            currentUser = { 
+                user: validUserObj.user, 
+                role: validUserObj.role.toLowerCase(), 
+                fullName: validUserObj.fullName 
+            };
+            
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'flex';
+            
+            aplicarRestriccionesDeRoles();
+            initSystem();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    function handleLogout() {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('appContainer').style.display = 'none';
+        document.getElementById('userInput').value = '';
+        document.getElementById('passInput').value = '';
+        currentUser = { user: "", role: "reader", fullName: "" };
+    }
+
+    function aplicarRestriccionesDeRoles() {
+        const displayBadge = document.getElementById('userDisplayBadge');
+        displayBadge.innerText = `Rendimiento: ${currentUser.fullName} (${currentUser.role})`;
+
+        const workspace = document.getElementById('workspaceLayout');
+        const formPanel = document.getElementById('panelFormularioTicket');
+        const btnCSV = document.getElementById('btnExportarBaseCSV');
+        const clickDerechoTip = document.getElementById('tipClickDerechoEliminar');
+
+        workspace.classList.remove('full-width');
+        formPanel.style.display = 'flex';
+        btnCSV.disabled = false;
+        clickDerechoTip.style.display = 'block';
+        document.getElementById('ticketReporta').disabled = false;
+
+        const creationDateGroup = document.getElementById('formGroupFechaApertura');
+        const creationDateInput = document.getElementById('ticketFechaApertura');
+        const isAdminOmi = String(currentUser.user || '').toLowerCase() === 'admin_omi';
+        if (isAdminOmi) {
+            creationDateGroup.style.display = 'flex';
+            if (creationDateInput && !creationDateInput.value) {
+                creationDateInput.value = new Date().toISOString().split('T')[0];
+            }
+        } else if (creationDateGroup) {
+            creationDateGroup.style.display = 'none';
+        }
+
+        if (currentUser.role === 'admin') {
+            // Admin Modo Full
+        } 
+        else if (currentUser.role === 'user') {
+            document.getElementById('ticketReporta').value = currentUser.fullName;
+            document.getElementById('ticketReporta').disabled = true;
+            btnCSV.disabled = true;
+            clickDerechoTip.style.display = 'none';
+        } 
+        else {
+            workspace.classList.add('full-width');
+            formPanel.style.display = 'none';
+            btnCSV.disabled = true;
+            clickDerechoTip.style.display = 'none';
+        }
+    }
+
+    function initSystem() {
+        // Inicializar Firebase
+        initializeFirebase();
+        
+        cargarListasDesplegables();
+        actualizarDesplegableHIM(); 
+        cargarFiltrosTabla();
+        const fp = document.querySelector("#ticketFechaLimite")._flatpickr;
+        if (fp) {
+            fp.setDate(new Date());
+        }
+        
+        // Inicializar selectores de año disponibles en el dropdown
+        const yearSelect = document.getElementById('selectA\u00f1oFiltro');
+        if (yearSelect) {
+            const currentYear = new Date().getFullYear();
+            for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+                if (!Array.from(yearSelect.options).some(opt => opt.value == y)) {
+                    const opt = document.createElement('option');
+                    opt.value = y;
+                    opt.textContent = y;
+                    yearSelect.appendChild(opt);
+                }
+            }
+            yearSelect.value = currentYear;
+        }
+        
+        // Inicializar selector de año en tabla de tickets
+        const yearFilterSelect = document.getElementById('filterYear');
+        if (yearFilterSelect) {
+            const currentYear = new Date().getFullYear();
+            // Añadir años futuros y pasados
+            for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+                if (!Array.from(yearFilterSelect.options).some(opt => opt.value == y)) {
+                    const opt = document.createElement('option');
+                    opt.value = y;
+                    opt.textContent = y;
+                    yearFilterSelect.appendChild(opt);
+                }
+            }
+        }
+        
+        actualizarFiltrosPeriodo();
+        
+        // Cargar datos: primero intentar desde Firebase, luego desde localStorage
+        cargarDesdeFirebase().then(cargadoDesdeFirebase => {
+            if (!cargadoDesdeFirebase) {
+                let datosLocales = JSON.parse(localStorage.getItem('huf_tickets')) || [];
+                tickets = datosLocales.filter(tk => tk && tk.id);
+                console.log(`Cargados ${tickets.length} tickets desde localStorage`);
+            }
+            localStorage.setItem('huf_tickets', JSON.stringify(tickets));
+            actualizarPantalla();
+            setupContextMenu();
+        });
+    }
+
+    function cargarListasDesplegables() {
+        const selectEquipo = document.getElementById('ticketEquipo');
+        if (selectEquipo && typeof EQUIPOS_LAB !== 'undefined') {
+            selectEquipo.innerHTML = "";
+            EQUIPOS_LAB.forEach(eq => {
+                const opt = document.createElement('option');
+                opt.value = eq; opt.textContent = eq;
+                selectEquipo.appendChild(opt);
+            });
+        }
+        const selectResp = document.getElementById('ticketResponsables');
+        if (selectResp && typeof LISTA_PERSONAL !== 'undefined') {
+            selectResp.innerHTML = "";
+            LISTA_PERSONAL.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p; opt.textContent = p;
+                selectResp.appendChild(opt);
+            });
+        }
+    }
+
+    function cargarFiltrosTabla() {
+        const filterResp = document.getElementById('filterResponsible');
+        const filterEquip = document.getElementById('filterEquipment');
+        if (filterResp) {
+            filterResp.innerHTML = '<option value="ALL">ALL</option>';
+            if (typeof LISTA_PERSONAL !== 'undefined') {
+                LISTA_PERSONAL.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p; opt.textContent = p;
+                    filterResp.appendChild(opt);
+                });
+            }
+        }
+        if (filterEquip) {
+            filterEquip.innerHTML = '<option value="ALL">ALL</option>';
+            if (typeof EQUIPOS_LAB !== 'undefined') {
+                EQUIPOS_LAB.forEach(eq => {
+                    const opt = document.createElement('option');
+                    opt.value = eq; opt.textContent = eq;
+                    filterEquip.appendChild(opt);
+                });
+            }
+        }
+    }
+
+    function resetTableFilters() {
+        document.getElementById('filterStatus').value = 'ALL';
+        document.getElementById('filterEquipment').value = 'ALL';
+        document.getElementById('filterPriority').value = 'ALL';
+        document.getElementById('filterType').value = 'ALL';
+        document.getElementById('filterResponsible').value = 'ALL';
+        document.getElementById('filterDue').value = 'ALL';
+        document.getElementById('filterYear').value = 'ALL';
+        document.getElementById('buscadorTickets').value = '';
+        actualizarPantalla();
+    }
+
+    function parseDateString(fechaStr) {
+        if(!fechaStr) return null;
+        const raw = String(fechaStr).trim();
+        let fecha = null;
+        if (raw.includes('-')) {
+            const partes = raw.split('-');
+            if (partes.length === 3) {
+                fecha = new Date(`${partes[0].padStart(4, '0')}-${partes[1].padStart(2, '0')}-${partes[2].padStart(2, '0')}T00:00:00`);
+            }
+        } else if (raw.includes('/')) {
+            const partes = raw.split('/');
+            if (partes.length === 3) {
+                fecha = new Date(`${partes[2].padStart(4, '0')}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}T00:00:00`);
+            }
+        } else {
+            fecha = new Date(raw);
+        }
+        if (!fecha || isNaN(fecha)) return null;
+        fecha.setHours(0,0,0,0);
+        return fecha;
+    }
+
+    function obtenerDiasParaVencimiento(fechaLimite) {
+        const fecha = parseDateString(fechaLimite);
+        if (!fecha) return null;
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        return Math.ceil((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    function actualizarDesplegableHIM() {
+        const equipoSeleccionado = document.getElementById('ticketEquipo').value;
+        const selectHIM = document.getElementById('ticketHIM');
+        if (!selectHIM) return;
+
+        selectHIM.innerHTML = "";
+        
+        let listaHIMs = [];
+        if (typeof MAPEO_HIM_EQUIPOS !== 'undefined' && MAPEO_HIM_EQUIPOS[equipoSeleccionado]) {
+            listaHIMs = MAPEO_HIM_EQUIPOS[equipoSeleccionado];
+        }
+
+        if (listaHIMs.length > 0) {
+            selectHIM.disabled = false;
+            listaHIMs.forEach(him => {
+                const opt = document.createElement('option');
+                opt.value = him; opt.textContent = him;
+                selectHIM.appendChild(opt);
+            });
+        } else {
+            selectHIM.disabled = true;
+            const opt = document.createElement('option');
+            opt.value = "N/A"; opt.textContent = "N/A (No Aplica)";
+            selectHIM.appendChild(opt);
+        }
+    }
+
+    function switchTab(tab) {
+        document.getElementById('tab-tickets').classList.remove('active');
+        document.getElementById('tab-stats').classList.remove('active');
+        document.getElementById('tab-tickets-lnk').classList.remove('active');
+        document.getElementById('tab-stats-lnk').classList.remove('active');
+
+        if(tab === 'tickets') {
+            document.getElementById('tab-tickets').classList.add('active');
+            document.getElementById('tab-tickets-lnk').classList.add('active');
+            actualizarPantalla();
+        } else {
+            document.getElementById('tab-stats').classList.add('active');
+            document.getElementById('tab-stats-lnk').classList.add('active');
+            filtrarMesPorSelector();
+        }
+    }
+
+    function obtenerPrefijoEquipo(nombreEquipo) {
+        const safeNombre = String(nombreEquipo || "GEN");
+        const palabras = safeNombre.toUpperCase().replace(/[^A-Z0-9 ]/g, "").split(/\s+/).filter(p => p.length > 0);
+        if (palabras.length === 0) return "GEN";
+        return palabras.length === 1 ? palabras[0].substring(0, 3) : palabras.slice(0, 3).map(p => p[0]).join("");
+    }
+
+    function generarFolioConsecutivo(nombreEquipo) {
+        const prefijo = obtenerPrefijoEquipo(nombreEquipo);
+        let maxNumero = 0;
+        tickets.forEach(tk => {
+            const safeId = String(tk.id || "");
+            if (safeId.startsWith(prefijo + "-")) {
+                const partes = safeId.split('-');
+                if (partes.length >= 2) {
+                    const num = parseInt(partes[1], 10);
+                    if (!isNaN(num) && num > maxNumero) maxNumero = num;
+                }
+            }
+        });
+        return `${prefijo}-${String(maxNumero + 1).padStart(3, '0')}`;
+    }
+
+    function crearTicket() {
+        
+        if(currentUser.role === 'reader') return;
+
+        const equipo = document.getElementById('ticketEquipo').value;
+        const him = document.getElementById('ticketHIM').value; 
+        const tipoSolicitud = document.getElementById('ticketTipo').value;
+        const prioridad = document.getElementById('ticketPrioridad').value;
+        const reporta = (currentUser.role === 'user') ? currentUser.fullName : document.getElementById('ticketReporta').value.trim();
+        const falla = document.getElementById('ticketFalla').value.trim();
+        const fp = document.querySelector("#ticketFechaLimite")._flatpickr;
+        const selectedDate = fp.selectedDates[0]; 
+    
+    if (!selectedDate) {
+        Swal.fire({ icon: 'warning', title: 'Fecha requerida' });
+        return;
+    }
+
+    // Convertimos a YYYY-MM-DD para que tu JSON de tickets no se rompa
+    const fechaLimite = selectedDate.toISOString().split('T')[0];
+        const selectResp = document.getElementById('ticketResponsables');
+        const responsables = Array.from(selectResp.selectedOptions).map(option => option.value);
+
+        if(!reporta || !falla || !fechaLimite || responsables.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'INCOMPLETE FIELDS', text: 'PLEASE COMPLETE INFORMATION', confirmButtonColor: '#aa1c25' });
+            return;
+        }
+
+        let fechaApertura = new Date().toISOString().split('T')[0];
+        if (String(currentUser.user || '').toLowerCase() === 'admin_omi') {
+            const fpA = document.querySelector('#ticketFechaApertura')._flatpickr;
+            if (fpA && fpA.selectedDates.length > 0) {
+                fechaApertura = fpA.selectedDates[0].toISOString().split('T')[0];
+            }
+        }
+
+        const nuevoTicket = {
+            id: generarFolioConsecutivo(equipo),
+            equipo: equipo, him: him, tipoSolicitud: tipoSolicitud, prioridad: prioridad, responsables: responsables, reporta: reporta, falla: falla,
+            fechaApertura: fechaApertura, fechaLimite: fechaLimite, fechaCierre: null,
+            estatus: 'IN PROGRESS', comentarios: []
+        };
+
+        tickets.push(nuevoTicket);
+        guardarDatos();
+        actualizarPantalla();
+        
+        if (currentUser.role !== 'user') {
+            document.getElementById('ticketReporta').value = '';
+        }
+        document.getElementById('ticketFalla').value = '';
+        selectResp.selectedIndex = -1;
+        Swal.fire({ icon: 'success', title: 'Ticket Creado', text: `Folio asignado: ${nuevoTicket.id}`, timer: 2000, showConfirmButton: false });
+    }
+
+function modificarFechaInline(id, nuevaFecha) {
+    if(currentUser.role !== 'admin') return;
+    const tk = tickets.find(t => String(t.id) === String(id));
+    if(tk && nuevaFecha) {
+        tk.fechaLimite = nuevaFecha; // Aquí se guarda la fecha en YYYY-MM-DD
+        guardarDatos();
+        actualizarPantalla();
+        const input = document.querySelector(`input.inline-date-edit[data-ticket-id="${id}"]`);
+        if (input) {
+            input.classList.add('saved-date');
+            setTimeout(() => input.classList.remove('saved-date'), 2000);
+        }
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Due date updated',
+                showConfirmButton: false,
+                timer: 1600,
+                timerProgressBar: true
+            });
+        }
+        console.log('Due date saved for ticket', id, '=>', nuevaFecha);
+    }
+}
+function inicializarFlatpickrInline(inputElement, ticketId) {
+    if (inputElement._flatpickr) {
+        inputElement._flatpickr.open();
+        return;
+    }
+
+    flatpickr(inputElement, {
+        locale: "es",
+        dateFormat: "Y-m-d",
+        defaultDate: inputElement.value,
+        onChange: function(selectedDates, dateStr) {
+            if (dateStr) {
+                inputElement.value = dateStr;
+                modificarFechaInline(ticketId, dateStr);
+            }
+        },
+        onClose: function(selectedDates, dateStr) {
+            if (dateStr) {
+                inputElement.value = dateStr;
+                modificarFechaInline(ticketId, dateStr);
+            }
+        }
+    });
+
+    inputElement._flatpickr.open();
+}
+    function cerrarTicket(id) {
+        if(currentUser.role !== 'admin') return;
+        const tk = tickets.find(t => String(t.id) === String(id));
+        if(!tk) return;
+
+        Swal.fire({
+            title: 'RESOLVED TICKET?',
+            input: 'textarea',
+            inputLabel: 'DESCRIBE REPARATION',
+            inputPlaceholder: 'COMMENTS...',
+            showCancelButton: true,
+            confirmButtonColor: '#34a853',
+            cancelButtonColor: '#555',
+            inputValidator: (value) => { if (!value.trim()) return '¡MISSING INFORMATION!'; }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const hoy = new Date().toISOString().split('T')[0];
+                tk.estatus = 'RESOLVED'; tk.fechaCierre = hoy;
+                if(!tk.comentarios) tk.comentarios = [];
+                tk.comentarios.push({ fecha: hoy, tipo: 'RESOLVED', texto: result.value.trim() });
+                guardarDatos(); actualizarPantalla();
+            }
+        });
+    }
+
+    function pausarTicket(id) {
+        if(currentUser.role !== 'admin') return;
+        const tk = tickets.find(t => String(t.id) === String(id));
+        if(!tk) return;
+
+        Swal.fire({
+            title: 'PAUSE TICKET?',
+            input: 'textarea',
+            inputLabel: 'REASON FOR PAUSE',
+            inputPlaceholder: 'COMMENTS...',
+            showCancelButton: true,
+            confirmButtonColor: '#f9ab00',
+            cancelButtonColor: '#555',
+            inputValidator: (value) => { if (!value.trim()) return 'Necesitas agregar un motivo.'; }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const hoy = new Date().toISOString().split('T')[0];
+                tk.estatus = 'PAUSED';
+                tk.fechaCierre = null;
+                if(!tk.comentarios) tk.comentarios = [];
+                tk.comentarios.push({ fecha: hoy, tipo: 'PAUSED', texto: result.value.trim() });
+                guardarDatos(); actualizarPantalla();
+            }
+        });
+    }
+
+    function cancelarTicket(id) {
+        if(currentUser.role !== 'admin') return;
+        const tk = tickets.find(t => String(t.id) === String(id));
+        if(!tk) return;
+
+        Swal.fire({
+            title: 'CANCEL TICKET?',
+            input: 'textarea',
+            inputLabel: 'REASON FOR CANCELLATION',
+            inputPlaceholder: 'COMMENTS...',
+            showCancelButton: true,
+            confirmButtonColor: '#aa1c25',
+            cancelButtonColor: '#555',
+            inputValidator: (value) => { if (!value.trim()) return 'Necesitas agregar un motivo.'; }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const hoy = new Date().toISOString().split('T')[0];
+                tk.estatus = 'CANCELED';
+                tk.fechaCierre = hoy;
+                if(!tk.comentarios) tk.comentarios = [];
+                tk.comentarios.push({ fecha: hoy, tipo: 'CANCELED', texto: result.value.trim() });
+                guardarDatos(); actualizarPantalla();
+            }
+        });
+    }
+
+    function reanudarTicket(id) {
+        if(currentUser.role !== 'admin') return;
+        const tk = tickets.find(t => String(t.id) === String(id));
+        if(!tk || tk.estatus !== 'PAUSED') return;
+        const hoy = new Date().toISOString().split('T')[0];
+        tk.estatus = 'IN PROGRESS';
+        if(!tk.comentarios) tk.comentarios = [];
+        tk.comentarios.push({ fecha: hoy, tipo: 'RESUMED', texto: 'Ticket resumed and placed back in progress.' });
+        guardarDatos(); actualizarPantalla();
+    }
+
+function reabrirTicket(id) {
+    if(currentUser.role !== 'admin') return;
+    const originalTk = tickets.find(t => String(t.id) === String(id));
+    if(!originalTk) return;
+    const hoy = new Date().toISOString().split('T')[0];
+
+    Swal.fire({
+        title: 'RE-OPEN',
+        html: `
+            <input type="text" id="swalFechaLimite" class="swal2-input" placeholder="Nueva Fecha Límite">
+            <textarea id="swalMotivo" class="swal2-textarea" placeholder="DESCRIPTION" style="width:90%; height:80px;"></textarea>
+        `,
+        // Se inicializa Flatpickr justo después de que el modal aparece
+        didOpen: () => {
+            flatpickr("#swalFechaLimite", {
+                locale: "es",
+                dateFormat: "Y-m-d", // Formato ISO para compatibilidad con tu sistema
+                defaultDate: hoy
+            });
+        },
+        showCancelButton: true,
+        confirmButtonColor: '#0d47a1',
+        confirmButtonText: 'CONFIRM',
+        preConfirm: () => {
+            const nf = document.getElementById('swalFechaLimite').value;
+            const mot = document.getElementById('swalMotivo').value.trim();
+            if(!nf || !mot) Swal.showValidationMessage('MISSING INFORMATION');
+            return { nuevaFecha: nf, motivo: mot };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const nuevoTicketClon = {
+                id: String(originalTk.id).split('-R')[0] + '-R' + Math.floor(10 + Math.random() * 90),
+                equipo: originalTk.equipo, 
+                him: originalTk.him || 'N/A', 
+                prioridad: originalTk.prioridad || 'MEDIA', 
+                responsables: originalTk.responsables || [],
+                reporta: originalTk.reporta, 
+                falla: originalTk.falla, 
+                fechaApertura: hoy, 
+                fechaLimite: result.value.nuevaFecha,
+                fechaCierre: null, 
+                estatus: 'IN PROGRESS',
+                comentarios: [{ fecha: hoy, tipo: 'RE-OPEN', texto: `TICKET RE-OPENED ${result.value.motivo}` }]
+            };
+            tickets.push(nuevoTicketClon); 
+            guardarDatos(); 
+            actualizarPantalla();
+            Swal.fire('Re-OPENED', 'NEW TICKET ADDED SUCCESFULLY', 'success');
+        }
+    });
+}
+
+    function agregarComentarioAdicional(id) {
+        if(currentUser.role === 'reader') return;
+        const tk = tickets.find(t => String(t.id) === String(id));
+        if(!tk) return;
+        Swal.fire({
+            title: 'ADD COMMENTS', input: 'textarea', showCancelButton: true, confirmButtonColor: '#6f42c1',
+            inputValidator: (value) => { if (!value.trim()) return 'No puedes guardar una nota vacía!'; }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const hoy = new Date().toISOString().split('T')[0];
+                if(!tk.comentarios) tk.comentarios = [];
+                tk.comentarios.push({ fecha: hoy, tipo: 'AVANCE', texto: result.value.trim() });
+                guardarDatos(); actualizarPantalla();
+            }
+        });
+    }
+
+    function verComentarios(id) {
+        const tk = tickets.find(t => String(t.id) === String(id));
+        if(!tk) return;
+        let html = `<div style="text-align:left; font-size:0.9rem;"><p><b>DEVICE:</b> ${tk.equipo} <i>(${tk.him || 'N/A'})</i></p><p><b>FAILURE</b> ${tk.falla}</p><hr>`;
+        if(!tk.comentarios || tk.comentarios.length === 0) {
+            html += `<p style="font-style:italic;">Sin comentarios registrados.</p>`;
+        } else {
+            tk.comentarios.forEach(c => {
+                html += `<div style="background:#f8f9fa; padding:8px; border-radius:6px; margin-bottom:8px; border-left:4px solid #6f42c1;">
+                    <small><b>[${c.tipo}]</b> - ${c.fecha}</small><br><div>${c.texto}</div></div>`;
+            });
+        }
+        Swal.fire({ title: `HISTORY ${tk.id}`, html: html, confirmButtonColor: '#aa1c25' });
+    }
+
+    function eliminarTicket(id) {
+        if(currentUser.role !== 'admin') return;
+        const targetId = String(id).trim();
+        Swal.fire({
+            title: '¿Eliminar permanentemente?', text: `Se borrará el folio ${targetId}.`, icon: 'warning',
+            showCancelButton: true, confirmButtonColor: '#aa1c25'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                tickets = tickets.filter(t => String(t.id).trim() !== targetId);
+                guardarDatos(); actualizarPantalla();
+                if(document.getElementById('tab-stats').classList.contains('active')) {
+                    filtrarMesPorSelector();
+                }
+            }
+        });
+    }
+
+    function guardarDatos() {
+        localStorage.setItem('huf_tickets', JSON.stringify(tickets));
+        // Intentar guardar en Firebase (asíncrono, no bloquea)
+        if (firebaseInitialized) {
+            guardarEnFirebase().catch(err => console.error('Error en guardarEnFirebase:', err));
+        }
+    }
+
+    function actualizarPantalla() {
+        const tbody = document.getElementById('tablaTicketsBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const busqueda = document.getElementById('buscadorTickets') ? document.getElementById('buscadorTickets').value.toLowerCase().trim() : '';
+        const filterStatus = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : 'ALL';
+        const filterEquipment = document.getElementById('filterEquipment') ? document.getElementById('filterEquipment').value : 'ALL';
+        const filterPriority = document.getElementById('filterPriority') ? document.getElementById('filterPriority').value : 'ALL';
+        const filterType = document.getElementById('filterType') ? document.getElementById('filterType').value : 'ALL';
+        const filterResponsible = document.getElementById('filterResponsible') ? document.getElementById('filterResponsible').value : 'ALL';
+        const filterDue = document.getElementById('filterDue') ? document.getElementById('filterDue').value : 'ALL';
+        const filterYear = document.getElementById('filterYear') ? document.getElementById('filterYear').value : 'ALL';
+
+        const role = currentUser?.role || 'reader';
+        const esAdmin = role === 'admin';
+        const esUser = role === 'user';
+
+        let abiertos = 0;
+        let cerrados = 0;
+        let pausados = 0;
+        let cancelados = 0;
+        let vencidos = 0;
+        let cerradosATiempo = 0;
+        let diasTotalesRespuesta = 0;
+        let proximosVence = 0;
+        let abiertosMas7d = 0;
+        let reabiertos = 0;
+        let aged30 = 0;
+        let totalOpenAge = 0;
+        let openCount = 0;
+        let slaBreaches = 0;
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+
+        tickets.forEach(tk => {
+            const safeId = String(tk.id || '').trim();
+            const safeStatus = String(tk.estatus || 'IN PROGRESS').toUpperCase();
+            const dueDays = obtenerDiasParaVencimiento(tk.fechaLimite);
+
+            const fechaAperturaObj = parseDateString(tk.fechaApertura);
+            const fechaCierreObj = parseDateString(tk.fechaCierre);
+            const fechaLimiteObj = parseDateString(tk.fechaLimite);
+            if (fechaAperturaObj && (safeStatus === 'IN PROGRESS' || safeStatus === 'PAUSED')) {
+                const openDays = Math.ceil((hoy.getTime() - fechaAperturaObj.getTime()) / (1000 * 60 * 60 * 24));
+                totalOpenAge += openDays;
+                openCount++;
+                if (openDays > 30) aged30++;
+            }
+            if (String(safeId).includes('-R')) {
+                reabiertos++;
+            }
+            if (safeStatus === 'IN PROGRESS') {
+                abiertos++;
+                if (dueDays !== null && dueDays < 0) {
+                    vencidos++;
+                    slaBreaches++;
+                }
+                if (dueDays !== null && dueDays >= 0 && dueDays <= 7) proximosVence++;
+                if (dueDays !== null && dueDays > 7) abiertosMas7d++;
+            } else if (safeStatus === 'PAUSED') {
+                pausados++;
+                if (dueDays !== null && dueDays < 0) slaBreaches++;
+            } else if (safeStatus === 'CANCELED') {
+                cancelados++;
+            } else if (safeStatus === 'RESOLVED') {
+                cerrados++;
+                if (fechaCierreObj && fechaLimiteObj && fechaCierreObj.getTime() <= fechaLimiteObj.getTime()) cerradosATiempo++;
+                if (fechaCierreObj && fechaLimiteObj && fechaCierreObj.getTime() > fechaLimiteObj.getTime()) slaBreaches++;
+                if (fechaAperturaObj && fechaCierreObj) {
+                    const diff = Math.ceil((fechaCierreObj.getTime() - fechaAperturaObj.getTime()) / (1000 * 60 * 60 * 24));
+                    diasTotalesRespuesta += diff >= 0 ? diff : 0;
+                }
+            }
+
+            const safeHIM = String(tk.him || 'N/A');
+            const safePriority = String(tk.prioridad || '').toUpperCase();
+            const safeEquipo = String(tk.equipo || '').toUpperCase();
+            const searchText = [safeId.toLowerCase(), safeEquipo.toLowerCase(), safeHIM.toLowerCase(), String(tk.falla || '').toLowerCase(), String(tk.reporta || '').toLowerCase(), (tk.responsables || []).join(' ').toLowerCase()].join(' ');
+
+            if (filterStatus !== 'ALL' && safeStatus !== filterStatus) return;
+            if (filterEquipment !== 'ALL' && safeEquipo !== filterEquipment.toUpperCase()) return;
+            if (filterPriority !== 'ALL' && safePriority !== filterPriority) return;
+            if (filterType !== 'ALL' && String(tk.tipoSolicitud || 'GENERAL').toUpperCase() !== filterType) return;
+            if (filterResponsible !== 'ALL') {
+                const responsableMatch = (tk.responsables || []).some(r => String(r).toUpperCase() === filterResponsible);
+                if (!responsableMatch) return;
+            }
+            if (filterDue !== 'ALL') {
+                if (dueDays === null) return;
+                if (filterDue === 'OVERDUE' && !(dueDays < 0)) return;
+                if (filterDue === 'NEXT_3' && !(dueDays >= 0 && dueDays <= 3)) return;
+                if (filterDue === 'NEXT_7' && !(dueDays >= 0 && dueDays <= 7)) return;
+                if (filterDue === 'NEXT_15' && !(dueDays >= 0 && dueDays <= 15)) return;
+            }
+            if (filterYear !== 'ALL') {
+                const yearApertura = String(tk.fechaApertura || '').includes('-') ? parseInt(String(tk.fechaApertura).split('-')[0], 10) : null;
+                const yearCierre = String(tk.fechaCierre || '').includes('-') ? parseInt(String(tk.fechaCierre).split('-')[0], 10) : null;
+                const selectedYear = parseInt(filterYear, 10);
+                if (yearApertura !== selectedYear && yearCierre !== selectedYear) return;
+            }
+            if (busqueda && !searchText.includes(busqueda)) return;
+
+            let claseFila = '';
+            if (safeStatus === 'IN PROGRESS') {
+                const dueDateObj = parseDateString(tk.fechaLimite);
+                if (dueDateObj && hoy.getTime() > dueDateObj.getTime()) claseFila = 'status-crit';
+                else if (dueDateObj && hoy.getTime() === dueDateObj.getTime()) claseFila = 'status-warn';
+            }
+
+            let celdaAccion = '';
+            if (safeStatus === 'IN PROGRESS' && esAdmin) {
+                celdaAccion += `<button class="action-icon-btn btn-ico-close" onclick="cerrarTicket('${safeId}')">✓</button>`;
+                celdaAccion += `<button class="action-icon-btn btn-ico-pause" onclick="pausarTicket('${safeId}')">⏸</button>`;
+                celdaAccion += `<button class="action-icon-btn btn-ico-cancel" onclick="cancelarTicket('${safeId}')">✕</button>`;
+            } else if (safeStatus === 'PAUSED' && esAdmin) {
+                celdaAccion += `<button class="action-icon-btn btn-ico-resume" onclick="reanudarTicket('${safeId}')">▶</button>`;
+                celdaAccion += `<button class="action-icon-btn btn-ico-cancel" onclick="cancelarTicket('${safeId}')">✕</button>`;
+            } else if (safeStatus === 'CANCELED' && esAdmin) {
+                celdaAccion += `<button class="action-icon-btn btn-ico-reopen" onclick="reabrirTicket('${safeId}')">⟲</button>`;
+            } else if (safeStatus !== 'IN PROGRESS' && safeStatus !== 'PAUSED' && safeStatus !== 'CANCELED' && esAdmin) {
+                celdaAccion += `<button class="action-icon-btn btn-ico-reopen" onclick="reabrirTicket('${safeId}')">⟲</button>`;
+            }
+
+            if (esAdmin || esUser) {
+                celdaAccion += `<button class="action-icon-btn btn-ico-note" onclick="agregarComentarioAdicional('${safeId}')">📝</button>`;
+            }
+            celdaAccion += `<button class="action-icon-btn btn-ico-view" onclick="verComentarios('${safeId}')">👁</button>`;
+
+            const tr = document.createElement('tr');
+            if (claseFila) tr.className = claseFila;
+            tr.setAttribute('data-id', safeId);
+
+            let respBadges = '';
+            if (tk.responsables && tk.responsables.length) {
+                tk.responsables.forEach(r => { respBadges += `<span class="responsible-tag">${r}</span>`; });
+            }
+
+            let celdaFechaLimite = `<td>${tk.fechaLimite || '-'}</td>`;
+            if (esAdmin) {
+                celdaFechaLimite = `<td><input type="text" class="inline-date-edit" data-ticket-id="${safeId}" value="${tk.fechaLimite || ''}" onfocus="inicializarFlatpickrInline(this, '${safeId}')" readonly></td>`;
+            }
+
+            let badgeHIMVisual = safeHIM !== 'N/A' ? `<span class="him-badge">${safeHIM}</span>` : '';
+            let badgeClass = 'bg-open';
+            if (safeStatus === 'RESOLVED') badgeClass = 'bg-closed';
+            else if (safeStatus === 'PAUSED') badgeClass = 'bg-paused';
+            else if (safeStatus === 'CANCELED') badgeClass = 'bg-canceled';
+
+            tr.innerHTML = `
+                <td style="font-weight:bold; color:var(--primary); font-family:monospace;">${safeId}</td>
+                <td><strong>${tk.equipo || 'General'}</strong> ${badgeHIMVisual}<br><small>${tk.falla || ''}</small><br><small style="color:#777;">Por: ${tk.reporta || ''}</small></td>
+                <td><span class="prio-badge p-${String(tk.prioridad || 'MEDIA').toLowerCase()}">${tk.prioridad || 'MEDIA'}</span></td>
+                <td><span class="type-tag">${String(tk.tipoSolicitud || 'GENERAL')}</span></td>
+                <td>${respBadges}</td>
+                <td>${tk.fechaApertura || '-'}</td>
+                ${celdaFechaLimite}
+                <td><span class="badge ${badgeClass}">${safeStatus}</span></td>
+                <td>${tk.fechaCierre || '-'}</td>
+                <td><div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">${celdaAccion}</div></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('kpi-abiertos').innerText = abiertos;
+        document.getElementById('kpi-cerrados').innerText = cerrados;
+        document.getElementById('kpi-pausados').innerText = pausados;
+        document.getElementById('kpi-cancelados').innerText = cancelados;
+        document.getElementById('kpi-vencidos').innerText = vencidos;
+        document.getElementById('kpi-proximos').innerText = proximosVence;
+        document.getElementById('kpi-mas7d').innerText = abiertosMas7d;
+        document.getElementById('kpi-eficiencia').innerText = cerrados > 0 ? Math.round((cerradosATiempo / cerrados) * 100) + '%' : '100%';
+        document.getElementById('kpi-promedio').innerText = cerrados > 0 ? (diasTotalesRespuesta / cerrados).toFixed(1) + 'd' : '0d';
+        document.getElementById('kpi-reabiertos').innerText = reabiertos;
+        document.getElementById('kpi-aged30').innerText = aged30;
+        document.getElementById('kpi-sla').innerText = slaBreaches;
+
+        if (document.getElementById('kpiDash-abiertos')) document.getElementById('kpiDash-abiertos').innerText = abiertos;
+        if (document.getElementById('kpiDash-cerrados')) document.getElementById('kpiDash-cerrados').innerText = cerrados;
+        if (document.getElementById('kpiDash-vencidos')) document.getElementById('kpiDash-vencidos').innerText = vencidos;
+        if (document.getElementById('kpiDash-pausados')) document.getElementById('kpiDash-pausados').innerText = pausados;
+        if (document.getElementById('kpiDash-proximos')) document.getElementById('kpiDash-proximos').innerText = proximosVence;
+        if (document.getElementById('kpiDash-reabiertos')) document.getElementById('kpiDash-reabiertos').innerText = reabiertos;
+        if (document.getElementById('kpiDash-aged30')) document.getElementById('kpiDash-aged30').innerText = aged30;
+        if (document.getElementById('kpiDash-sla')) document.getElementById('kpiDash-sla').innerText = slaBreaches;
+        if (document.getElementById('kpiDash-promedio')) document.getElementById('kpiDash-promedio').innerText = cerrados > 0 ? (diasTotalesRespuesta / cerrados).toFixed(1) + 'd' : '0d';
+    }
+
+    function setupContextMenu() {
+        const menu = document.getElementById('customContextMenu');
+        const tbody = document.getElementById('tablaTicketsBody');
+        if(!tbody) return;
+
+        tbody.addEventListener('contextmenu', function(e) {
+            if(currentUser.role !== 'admin') return; 
+            
+            const row = e.target.closest('tr');
+            if(!row) return;
+            e.preventDefault();
+            selectedTicketIdForContext = row.getAttribute('data-id');
+            menu.style.left = `${e.pageX}px`; menu.style.top = `${e.pageY}px`; menu.style.display = 'block';
+        });
+
+        document.addEventListener('click', function() { menu.style.display = 'none'; });
+        document.getElementById('contextDeleteBtn').addEventListener('click', function() {
+            if(selectedTicketIdForContext && currentUser.role === 'admin') { 
+                eliminarTicket(selectedTicketIdForContext); 
+                selectedTicketIdForContext = null; 
+            }
+        });
+    }
+
+    function generarDatosMensuales(year = null) {
+        const a = Array(12).fill(0), c = Array(12).fill(0);
+        tickets.forEach(tk => {
+            const fA = String(tk.fechaApertura || ""), fC = String(tk.fechaCierre || ""), status = String(tk.estatus || "").toUpperCase();
+            
+            // Filtrar por año si se especifica
+            let incluirPorAño = true;
+            if (year !== null) {
+                const yearApertura = fA.includes('-') ? parseInt(fA.split('-')[0], 10) : null;
+                const yearCierre = fC.includes('-') ? parseInt(fC.split('-')[0], 10) : null;
+                incluirPorAño = (yearApertura === year || yearCierre === year);
+            }
+            
+            if (incluirPorAño) {
+                if(fA.includes('-')) { const m = parseInt(fA.split('-')[1], 10) - 1; if(m>=0 && m<12) a[m]++; }
+                if(status === 'RESOLVED' && fC.includes('-')) { const m = parseInt(fC.split('-')[1], 10) - 1; if(m>=0 && m<12) c[m]++; }
+            }
+        });
+        return { labels: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"], openings: a, closures: c };
+    }
+
+    function filtrarMesPorSelector() {
+        if (periodoActual === "ALL_PERIODS") {
+            renderizarGraficoBarras(null);
+            mostrarDesgloseMesYPasteles(null, null);
+            if(typeof LISTA_PERSONAL !== 'undefined') calcularRendimientoResponsables(null, null);
+        } else if (periodoActual === "YEAR") {
+            const year = parseInt(document.getElementById('selectA\u00f1oFiltro').value, 10);
+            renderizarGraficoBarras(year);
+            mostrarDesgloseMesYPasteles(null, year);
+            if(typeof LISTA_PERSONAL !== 'undefined') calcularRendimientoResponsables(null, year);
+        } else if (periodoActual === "MONTH") {
+            const year = parseInt(document.getElementById('selectA\u00f1oFiltro').value, 10);
+            const mes = parseInt(document.getElementById('selectMesFiltro').value, 10);
+            renderizarGraficoBarras(year);
+            mostrarDesgloseMesYPasteles(mes, year);
+            if(typeof LISTA_PERSONAL !== 'undefined') calcularRendimientoResponsables(mes, year);
+        }
+    }
+    
+    function debeIncluirseTicket(tk, mesIndex, year) {
+        if (!tk) return false;
+        const fA = String(tk.fechaApertura || "");
+        const fC = String(tk.fechaCierre || "");
+        
+        if (mesIndex === null && year === null) {
+            return true; // ALL_PERIODS
+        } else if (mesIndex === null && year !== null) {
+            // Filtrar por año
+            const yearApertura = fA.includes('-') ? parseInt(fA.split('-')[0], 10) : null;
+            const yearCierre = fC.includes('-') ? parseInt(fC.split('-')[0], 10) : null;
+            return yearApertura === year || yearCierre === year;
+        } else if (mesIndex !== null && year !== null) {
+            // Filtrar por mes y año
+            const mesApertura = fA.includes('-') ? parseInt(fA.split('-')[1], 10) - 1 : null;
+            const yearApertura = fA.includes('-') ? parseInt(fA.split('-')[0], 10) : null;
+            const mesCierre = fC.includes('-') ? parseInt(fC.split('-')[1], 10) - 1 : null;
+            const yearCierre = fC.includes('-') ? parseInt(fC.split('-')[0], 10) : null;
+            return (mesApertura === mesIndex && yearApertura === year) || (mesCierre === mesIndex && yearCierre === year);
+        }
+        return false;
+    }
+
+    function mostrarDesgloseMesYPasteles(mesIndex, year) {
+        const tbody = document.getElementById('drilldownTableBody');
+        if(!tbody) return; tbody.innerHTML = '';
+        
+        let conteoAbiertos = 0, conteoCerrados = 0, conteoPausados = 0, conteoCancelados = 0;
+        let cargaResponsablesMes = {};
+        
+        if (typeof LISTA_PERSONAL !== 'undefined') {
+            LISTA_PERSONAL.forEach(p => cargaResponsablesMes[p] = 0);
+        }
+
+        tickets.forEach(tk => {
+            if (!debeIncluirseTicket(tk, mesIndex, year)) return;
+            
+            const status = String(tk.estatus || "").toUpperCase();
+            if (status === 'IN PROGRESS') conteoAbiertos++;
+            else if (status === 'RESOLVED') conteoCerrados++;
+            else if (status === 'PAUSED') conteoPausados++;
+            else if (status === 'CANCELED') conteoCancelados++;
+
+            if(tk.responsables && tk.responsables.length > 0) {
+                tk.responsables.forEach(r => {
+                    if(cargaResponsablesMes[r] !== undefined) cargaResponsablesMes[r]++;
+                    else cargaResponsablesMes[r] = 1;
+                });
+            }
+
+            let respBadges = '';
+            if(tk.responsables) tk.responsables.forEach(r => { respBadges += `<span class="responsible-tag">${r}</span>`; });
+            let bHIM = tk.him && tk.him !== 'N/A' ? `<span class="him-badge">${tk.him}</span>` : '';
+
+            const tr = document.createElement('tr');
+            const statusBadge = status === 'IN PROGRESS' ? 'bg-open' : status === 'PAUSED' ? 'bg-paused' : status === 'CANCELED' ? 'bg-canceled' : 'bg-closed';
+            tr.innerHTML = `
+                <td style="font-weight:bold; color:var(--primary); font-family:monospace;">${tk.id}</td>
+                <td><strong>${tk.equipo || 'General'}</strong> ${bHIM}<br><small style="color:#666;">${tk.falla || ''}</small></td>
+                <td>${respBadges}</td>
+                <td>${tk.fechaApertura || '-'}</td>
+                <td>${tk.fechaLimite || '-'}</td>
+                <td><span class="badge ${statusBadge}">${status}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        let titleText = '';
+        if (mesIndex === null && year === null) {
+            titleText = 'ALL TICKETS (All Time)';
+        } else if (mesIndex === null && year !== null) {
+            titleText = `TICKETS BY YEAR ${year}`;
+        } else if (mesIndex !== null && year !== null) {
+            titleText = `TICKETS BY MONTH ${mesesNombres[mesIndex]} ${year}`;
+        }
+        
+        if(tbody.innerHTML === '') {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777; font-style:italic; padding:25px;">No hay tickets en el período seleccionado.</td></tr>`;
+        }
+        document.getElementById('drilldownTitle').innerText = titleText;
+
+        renderizarPastelEstatus(conteoAbiertos, conteoCerrados, conteoPausados, conteoCancelados);
+        renderizarPastelResponsables(cargaResponsablesMes);
+    }
+
+    function renderizarPastelEstatus(abiertos, cerrados, pausados, cancelados) {
+        const ctx = document.getElementById('chartPieEstatus').getContext('2d');
+        if (chartPieEstatusInstance) chartPieEstatusInstance.destroy();
+
+        chartPieEstatusInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['IN PROGRESS', 'RESOLVED', 'PAUSED', 'CANCELED'],
+                datasets: [{
+                    data: [abiertos, cerrados, pausados, cancelados],
+                    backgroundColor: ['#ff8c00', '#34a853', '#6c757d', '#6f42c1']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 12 },
+                        formatter: (val, ctx) => {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((val / total) * 100).toFixed(0) + '%' : '0%';
+                            return val > 0 ? `${val} (${percentage})` : null;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderizarPastelResponsables(cargaData) {
+        const ctx = document.getElementById('chartPieResponsables').getContext('2d');
+        if (chartPieResponsablesInstance) chartPieResponsablesInstance.destroy();
+
+        const labels = Object.keys(cargaData).filter(p => cargaData[p] > 0);
+        const data = Object.values(cargaData).filter(val => val > 0);
+        const coloresPastel = ['#aa1c25', '#1a73e8', '#f9ab00', '#6f42c1', '#17a2b8', '#555555', '#7b1fa2'];
+
+        chartPieResponsablesInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: coloresPastel.slice(0, labels.length)
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: (val, ctx) => {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((val / total) * 100).toFixed(0) + '%';
+                            return `${val} (${percentage})`;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function calcularRendimientoResponsables(mesIndex, year) {
+        const tbody = document.getElementById('tablaResponsablesBody');
+        if(!tbody) return; tbody.innerHTML = '';
+        
+        let titleText = '';
+        if (mesIndex === null && year === null) {
+            titleText = 'ALL TIME';
+        } else if (mesIndex === null && year !== null) {
+            titleText = year.toString();
+        } else if (mesIndex !== null && year !== null) {
+            titleText = mesesNombres[mesIndex].substring(0,3) + ' ' + year;
+        }
+        document.getElementById('th-resp-mes').innerText = `Movimientos en ${titleText}.`;
+        
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+
+        if (typeof LISTA_PERSONAL !== 'undefined') {
+            LISTA_PERSONAL.forEach(persona => {
+                let totalGeneral = 0, abiertosGen = 0, cerradosGen = 0, vencidosGen = 0, totalMes = 0;
+                tickets.forEach(tk => {
+                    const status = String(tk.estatus || "").toUpperCase();
+                    if(tk.responsables && tk.responsables.includes(persona)) {
+                        totalGeneral++;
+                        if(status === 'IN PROGRESS') {
+                            abiertosGen++;
+                            const dueDateObj = parseDateString(tk.fechaLimite);
+                            if (dueDateObj && hoy.getTime() > dueDateObj.getTime()) vencidosGen++;
+                        }
+                        else if(status === 'RESOLVED') cerradosGen++;
+
+                        if (debeIncluirseTicket(tk, mesIndex, year)) totalMes++;
+                    }
+                });
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: bold; color: var(--dark);">👤 ${persona}</td>
+                    <td style="text-align: center; font-family: monospace; font-weight: bold;">${totalGeneral}</td>
+                    <td style="text-align: center; font-family: monospace; color: var(--warn); font-weight: bold;">${abiertosGen}</td>
+                    <td style="text-align: center; font-family: monospace; color: var(--ok); font-weight: bold;">${cerradosGen}</td>
+                    <td style="text-align: center; font-family: monospace; color: ${vencidosGen > 0 ? 'var(--primary)' : '#777'}; font-weight: bold;">${vencidosGen}</td>
+                    <td style="text-align: center; font-family: monospace; background-color: rgba(170, 28, 37, 0.04); font-weight: bold; color: var(--primary);">${totalMes}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    }
+
+    function renderizarGraficoBarras(year = null) {
+        const canvas = document.getElementById('chartMensual');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dm = generarDatosMensuales(year);
+
+        if(chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dm.labels,
+                datasets: [
+                    { label: 'IN PROGRESS', data: dm.openings, backgroundColor: '#ff8c00', borderWidth: 1 },
+                    { label: 'RESOLVED', data: dm.closures, backgroundColor: '#34a853', borderWidth: 1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                onClick: (e, active) => {
+                    if(active && active.length > 0) {
+                        const idx = active[0].index;
+                        document.getElementById('selectMesFiltro').value = idx;
+                        filtrarMesPorSelector();
+                    }
+                },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    function exportarCSV() {
+        if(currentUser.role !== 'admin' || tickets.length === 0) return;
+        let csv = "data:text/csv;charset=utf-8,\uFEFFid,Equipo,HIM,Tipo,Prioridad,Reporta,Falla,Apertura,Limite,Estatus,Cierre,Responsables\n";
+        tickets.forEach(tk => {
+            csv += `"${tk.id}","${tk.equipo || ''}","${tk.him || 'N/A'}",` +
+                   `"${tk.tipoSolicitud || 'GENERAL'}","${tk.prioridad}","${tk.reporta || ''}",` +
+                   `"${String(tk.falla || '').replace(/\n/g,' ')}","${tk.fechaApertura}","${tk.fechaLimite}",` +
+                   `"${tk.estatus}","${tk.fechaCierre || '-'}","${(tk.responsables || []).join('; ')}"\n`;
+        });
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csv));
+        link.setAttribute("download", "HUF_MX_Report_" + new Date().toISOString().split('T')[0] + ".csv");
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+
+</script>
+</body>
+</html>
