@@ -1,15 +1,15 @@
 // user.js - Base de Datos de Usuarios y Roles HUF Lab
 const USERS_DATABASE = [
     {
-        user: "1",
-        pass: "1",
+        user: "oamador",
+        pass: "1234",
         role: "admin",
         fullName: "Omar Amador"
     },
     {
-        user: "2",
-        pass: "2",
-        role: "user",
+        user: "irodriguez",
+        pass: "nacho123",
+        role: "admin",
         fullName: "Ignacio Rodriguez"
     },
     {
